@@ -1,1 +1,0 @@
-# labyrinth_for_Zarin
