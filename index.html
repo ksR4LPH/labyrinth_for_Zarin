@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Лабиринт для Зарин 💜</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;1,400;1,700&family=Cormorant+Garamond:ital,wght@0,400;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;background:#06000f;touch-action:none;user-select:none;-webkit-user-select:none;}
+canvas#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+#s-start,#s-game,#s-win{position:fixed;inset:0;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:'Cormorant Garamond',Georgia,serif;}
+#s-start{padding:env(safe-area-inset-top,40px) 24px 40px;gap:20px;}
+#s-game{justify-content:center;padding:env(safe-area-inset-top,12px) 10px 14px;gap:6px;}
+#s-win{padding:env(safe-area-inset-top,40px) 24px 40px;gap:16px;overflow-y:auto;}
+#s-comp{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:rgba(4,0,18,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);font-family:'Cormorant Garamond',Georgia,serif;}
+#s-comp.show{display:flex;}
+.start-icon{font-size:56px;animation:float 3s ease-in-out infinite;}
+.glow-title{font-family:'Playfair Display',serif;font-style:italic;font-size:clamp(1.4rem,5.5vw,1.9rem);color:#e9d5ff;text-align:center;line-height:1.3;text-shadow:0 0 32px rgba(168,85,247,.5);}
+.sub{font-style:italic;font-size:clamp(.78rem,3.2vw,.9rem);color:rgba(192,132,252,.55);text-align:center;letter-spacing:.03em;}
+.btn-main{background:linear-gradient(135deg,#581c87,#7c3aed,#581c87);color:#f3e8ff;border:1px solid rgba(216,180,254,.3);border-radius:50px;padding:13px 38px;font-family:'Playfair Display',serif;font-style:italic;font-size:clamp(.95rem,3.8vw,1.05rem);cursor:pointer;letter-spacing:.06em;transition:all .25s;text-shadow:0 0 12px rgba(216,180,254,.4);min-height:48px;}
+.btn-main:active{transform:scale(.97);}
+#hud{display:flex;justify-content:space-between;align-items:center;width:100%;max-width:360px;}
+.hbx{color:rgba(216,180,254,.7);font-style:italic;font-size:clamp(.68rem,2.8vw,.82rem);background:rgba(88,28,135,.2);border:1px solid rgba(139,92,246,.2);border-radius:20px;padding:4px 10px;}
+#dots{display:flex;gap:5px;align-items:center;}
+.dot{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.1);border:1px solid rgba(139,92,246,.3);transition:all .5s;}
+.dot.done{background:#a855f7;border-color:#c084fc;box-shadow:0 0 8px rgba(168,85,247,.7);}
+#maze{display:grid;gap:2px;background:#0d0030;border:1px solid rgba(88,28,135,.4);border-radius:10px;padding:4px;flex-shrink:0;}
+.cell{border-radius:3px;position:relative;display:flex;align-items:center;justify-content:center;}
+.wall{background:#1a0050;}
+.path{background:#08001a;}
+.visited{background:#0f0035;}
+.end-cell::after{content:'✦';color:#fbbf24;font-size:clamp(9px,2.8vw,13px);animation:float 1.2s ease-in-out infinite;position:absolute;}
+.start-cell::after{content:'◇';color:rgba(168,85,247,.5);font-size:clamp(8px,2.4vw,11px);position:absolute;}
+.pdot{border-radius:50%;position:absolute;transition:none;}
+#arrows{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,52px);gap:8px;flex-shrink:0;}
+.arr{background:rgba(88,28,135,.22);border:1px solid rgba(139,92,246,.3);border-radius:14px;color:rgba(216,180,254,.8);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;user-select:none;-webkit-user-select:none;min-width:52px;min-height:52px;}
+.arr:active{background:rgba(139,92,246,.5);transform:scale(.92);}
+#info{font-style:italic;font-size:clamp(.68rem,2.6vw,.78rem);color:rgba(168,85,247,.5);text-align:center;min-height:14px;padding:0 8px;}
+.comp-card{background:linear-gradient(160deg,#0d0030,#06001a,#0d0030);border:1px solid rgba(168,85,247,.22);border-radius:22px;padding:clamp(22px,5vw,36px) clamp(20px,4.5vw,32px) clamp(18px,4vw,26px);max-width:320px;width:100%;text-align:center;position:relative;overflow:hidden;animation:cardIn .55s cubic-bezier(.16,1,.3,1);}
+@keyframes cardIn{from{opacity:0;transform:scale(.88) translateY(20px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.comp-card::before{content:'';position:absolute;top:0;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,rgba(216,180,254,.55),transparent);}
+.comp-card::after{content:'';position:absolute;bottom:0;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,rgba(168,85,247,.25),transparent);}
+.comp-icon{font-size:clamp(2rem,8.5vw,2.8rem);display:block;margin-bottom:10px;animation:float 2.5s ease-in-out infinite;}
+.comp-badge{font-style:italic;font-size:clamp(.52rem,1.9vw,.62rem);letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px;opacity:.6;}
+.comp-title{font-family:'Playfair Display',serif;font-style:italic;font-size:clamp(1.05rem,4.2vw,1.35rem);color:#e9d5ff;margin-bottom:12px;line-height:1.2;text-shadow:0 0 20px rgba(168,85,247,.3);}
+.comp-divider{width:40px;height:1px;background:linear-gradient(90deg,transparent,rgba(168,85,247,.5),transparent);margin:0 auto 14px;}
+.comp-text{font-style:italic;font-size:clamp(.92rem,3.8vw,1.12rem);line-height:2.15;color:rgba(220,200,255,.85);}
+.comp-text em{font-style:normal;color:#f0e6ff;font-weight:600;}
+.btn-next{margin-top:clamp(14px,3vw,20px);background:transparent;border-radius:40px;padding:12px 28px;font-family:'Playfair Display',serif;font-style:italic;font-size:clamp(.88rem,3.6vw,1rem);cursor:pointer;letter-spacing:.08em;transition:all .25s;min-height:48px;}
+.btn-next:active{transform:scale(.97);}
+.win-deco{font-size:clamp(2.2rem,11vw,3.2rem);animation:float 2.5s ease-in-out infinite;}
+.win-title{font-family:'Playfair Display',serif;font-style:italic;font-size:clamp(1.1rem,4.5vw,1.5rem);color:#e9d5ff;text-align:center;text-shadow:0 0 24px rgba(168,85,247,.4);}
+.letter{background:linear-gradient(155deg,#0d0030,#08001a,#0d0030);border:1px solid rgba(168,85,247,.2);border-radius:18px;padding:clamp(18px,4.5vw,28px) clamp(16px,4.5vw,24px);max-width:310px;width:100%;text-align:center;position:relative;}
+.letter::before{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,rgba(216,180,254,.5),transparent);}
+.letter p{font-style:italic;font-size:clamp(.88rem,3.6vw,1rem);line-height:2.05;color:rgba(220,205,255,.82);margin-bottom:12px;}
+.letter p:last-child{margin:0;}
+.letter strong{color:#f0e6ff;font-weight:600;font-style:normal;}
+.letter-sig{text-align:right;margin-top:14px;font-size:clamp(.68rem,2.4vw,.78rem);color:rgba(139,92,246,.45);font-style:italic;}
+#musicBtn{position:fixed;top:max(env(safe-area-inset-top,0px),14px);right:14px;z-index:30;width:42px;height:42px;border-radius:50%;border:1px solid rgba(139,92,246,.3);background:rgba(88,28,135,.2);display:flex;align-items:center;justify-content:center;font-size:1rem;cursor:pointer;transition:all .3s;backdrop-filter:blur(8px);}
+#musicBtn.on{border-color:rgba(168,85,247,.7);box-shadow:0 0 12px rgba(168,85,247,.3);}
+@keyframes float{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}
+</style>
+</head>
+<body>
+<audio id="bgm" loop preload="auto"><source src="music.mp3" type="audio/mpeg"></audio>
+<canvas id="bg"></canvas>
+
+<div id="s-start">
+  <div class="start-icon">🌀</div>
+  <div class="glow-title">Лабиринт для Зарин</div>
+  <div class="sub">5 уровней · каждый с признанием 💜</div>
+  <button class="btn-main" id="btnStart">▶ Начать</button>
+</div>
+
+<div id="s-game" style="display:none">
+  <div id="hud">
+    <div class="hbx">🌀 <span id="lvlN">1</span>/5</div>
+    <div id="dots"></div>
+    <div class="hbx">✦ <span id="scN">0</span></div>
+  </div>
+  <div id="maze"></div>
+  <div id="info"></div>
+  <div id="arrows">
+    <div></div><div class="arr" id="aU">▲</div><div></div>
+    <div class="arr" id="aL">◀</div><div class="arr" id="aD">▼</div><div class="arr" id="aR">▶</div>
+  </div>
+</div>
+
+<div id="s-comp">
+  <div class="comp-card" id="ccard">
+    <span class="comp-icon" id="cIcon"></span>
+    <div class="comp-badge" id="cBadge"></div>
+    <div class="comp-title" id="cTitle"></div>
+    <div class="comp-divider"></div>
+    <div class="comp-text" id="cText"></div>
+    <button class="btn-next" id="btnNext"></button>
+  </div>
+</div>
+
+<div id="s-win" style="display:none">
+  <div class="win-deco">💌</div>
+  <div class="win-title">Зарин, моя единственная...</div>
+  <div class="letter">
+    <p>Я не умею красиво говорить.<br>Но я знаю одно —<br><strong>с того момента, как увидел тебя,<br>что-то внутри меня изменилось навсегда.</strong></p>
+    <p>Вчера я держал твою руку.<br>Просто держал — и молчал.<br><strong>Потому что в ту секунду мне не нужно было ничего больше.</strong></p>
+    <p>Ты не знаешь, как ты выглядишь,<br>когда смеёшься. Я знаю.<br><strong>Это самое красивое, что я видел в жизни.</strong></p>
+    <p>Я хочу быть тем, кто всегда рядом.<br>Кто никуда не уйдёт.<br><strong>Зарин — я люблю тебя. По-настоящему. 💜</strong></p>
+    <div class="letter-sig">— from r4lph to JK)</div>
+  </div>
+  <button class="btn-main" id="btnRestart">Играть снова</button>
+</div>
+
+<div id="musicBtn" onclick="toggleMusic()">🎵</div>
+
+<script>
+const LEVELS=[
+  {rows:7,cols:7,color:'#c084fc',icon:'🌸',title:'Уровень 1 пройден',badge:'первый шаг',
+   text:'Знаешь, что я заметил<br>в первую же секунду?<br><em>Твои глаза. Тёплые. Карие. Твои.</em><br>С тех пор я не могу перестать думать о тебе.',
+   btnTxt:'Дальше →',
+   grid:[[1,1,1,1,1,1,1],[1,0,0,0,1,0,1],[1,0,1,0,1,0,1],[1,0,1,0,0,0,1],[1,0,1,1,1,0,1],[1,0,0,0,0,0,1],[1,1,1,1,1,1,1]],
+   start:{r:1,c:1},end:{r:5,c:5}},
+  {rows:9,cols:9,color:'#818cf8',icon:'🤍',title:'Уровень 2 пройден',badge:'второй шаг',
+   text:'Вчера я держал твою руку.<br>Сердце моё билось так громко —<br>я боялся, ты услышишь.<br><em>Я не хотел отпускать. Никогда.</em>',
+   btnTxt:'Продолжить →',
+   grid:[[1,1,1,1,1,1,1,1,1],[1,0,0,0,1,0,0,0,1],[1,0,1,0,1,0,1,0,1],[1,0,1,0,0,0,1,0,1],[1,0,1,1,1,1,1,0,1],[1,0,0,0,0,0,0,0,1],[1,1,1,0,1,1,1,0,1],[1,0,0,0,1,0,0,0,1],[1,1,1,1,1,1,1,1,1]],
+   start:{r:1,c:1},end:{r:7,c:7}},
+  {rows:11,cols:11,color:'#34d399',icon:'🌿',title:'Уровень 3 пройден',badge:'на полпути',
+   text:'Ты смеёшься — и весь мир<br>как будто делает глубокий вдох.<br>Ты нежная. Ты сильная.<br><em>Ты — моя любимая.</em>',
+   btnTxt:'Вперёд →',
+   grid:[[1,1,1,1,1,1,1,1,1,1,1],[1,0,0,0,1,0,0,0,1,0,1],[1,0,1,0,1,0,1,0,0,0,1],[1,0,1,0,0,0,1,1,1,0,1],[1,0,1,1,1,0,1,0,0,0,1],[1,0,0,0,1,0,0,0,1,0,1],[1,1,1,0,1,1,1,0,1,0,1],[1,0,0,0,0,0,1,0,1,0,1],[1,0,1,1,1,0,1,0,0,0,1],[1,0,0,0,1,0,0,0,1,0,1],[1,1,1,1,1,1,1,1,1,1,1]],
+   start:{r:1,c:1},end:{r:9,c:9}},
+  {rows:13,cols:13,color:'#f9a8d4',icon:'❤️',title:'Уровень 4 пройден',badge:'почти финал',
+   text:'Ты даже не знаешь,<br>как ты на меня влияешь.<br>Когда ты рядом — я <em>лучше.</em><br>Я спокойнее. Я счастливее. Я — твой.',
+   btnTxt:'Последний уровень →',
+   grid:[[1,1,1,1,1,1,1,1,1,1,1,1,1],[1,0,0,0,1,0,0,0,1,0,0,0,1],[1,0,1,0,1,0,1,0,1,0,1,0,1],[1,0,1,0,0,0,1,0,0,0,1,0,1],[1,0,1,1,1,1,1,1,1,1,1,0,1],[1,0,0,0,0,0,0,0,0,0,0,0,1],[1,1,1,1,1,0,1,1,1,1,1,0,1],[1,0,0,0,0,0,1,0,0,0,1,0,1],[1,0,1,1,1,0,1,0,1,0,1,0,1],[1,0,1,0,0,0,0,0,1,0,0,0,1],[1,0,1,0,1,1,1,0,1,1,1,0,1],[1,0,0,0,1,0,0,0,0,0,0,0,1],[1,1,1,1,1,1,1,1,1,1,1,1,1]],
+   start:{r:1,c:1},end:{r:11,c:11}},
+  {rows:15,cols:15,color:'#fbbf24',icon:'💛',title:'Все уровни пройдены!',badge:'финал',
+   text:'Я скучаю по тебе,<br>даже когда ты рядом.<br><em>Хочу ещё. Хочу всегда.</em><br>Зарин — ты моя. Я люблю тебя. 💜',
+   btnTxt:'Открыть письмо 💌',
+   grid:[[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],[1,0,0,0,1,0,0,0,1,0,0,0,1,0,1],[1,0,1,0,1,0,1,0,0,0,1,0,1,0,1],[1,0,1,0,0,0,1,1,1,0,1,0,0,0,1],[1,0,1,1,1,1,1,0,1,0,1,1,1,0,1],[1,0,0,0,0,0,0,0,1,0,0,0,1,0,1],[1,1,1,1,1,0,1,1,1,1,1,0,1,0,1],[1,0,0,0,0,0,1,0,0,0,0,0,1,0,1],[1,0,1,1,1,0,1,0,1,1,1,0,1,0,1],[1,0,1,0,0,0,0,0,1,0,0,0,0,0,1],[1,0,1,0,1,1,1,0,1,0,1,1,1,0,1],[1,0,1,0,1,0,0,0,1,0,1,0,0,0,1],[1,0,0,0,1,0,1,1,1,0,1,0,1,0,1],[1,0,1,0,0,0,0,0,0,0,0,0,1,0,1],[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]],
+   start:{r:1,c:1},end:{r:13,c:13}},
+];
+
+let lvl=0,pr=0,pc=0,score=0,blocked=false;
+
+function cs(){
+  const l=LEVELS[lvl];
+  const reservedH=36+20+112+60;
+  const availH=window.innerHeight-reservedH-40;
+  const availW=window.innerWidth-28;
+  const avail=Math.min(availH,availW);
+  return Math.max(16,Math.floor((avail-10)/Math.max(l.rows,l.cols)));
+}
+
+function buildDots(){
+  const d=document.getElementById('dots');d.innerHTML='';
+  LEVELS.forEach((_,i)=>{const s=document.createElement('div');s.className='dot';s.id='dot'+i;d.appendChild(s);});
+}
+
+function renderMaze(){
+  const l=LEVELS[lvl],c=cs(),m=document.getElementById('maze');
+  m.style.gridTemplateColumns=`repeat(${l.cols},${c}px)`;
+  m.style.gridTemplateRows=`repeat(${l.rows},${c}px)`;
+  m.innerHTML='';
+  for(let r=0;r<l.rows;r++){
+    for(let cc=0;cc<l.cols;cc++){
+      const el=document.createElement('div');
+      el.id=`c${r}_${cc}`;el.style.width=c+'px';el.style.height=c+'px';
+      if(l.grid[r][cc]===1){el.className='cell wall';}
+      else{
+        el.className='cell path';
+        if(r===l.end.r&&cc===l.end.c) el.classList.add('end-cell');
+        else if(r===l.start.r&&cc===l.start.c) el.classList.add('start-cell');
+      }
+      m.appendChild(el);
+    }
+  }
+  placePlayer();
+}
+
+function placePlayer(){
+  document.querySelectorAll('.pdot').forEach(e=>e.remove());
+  const c=cs(),l=LEVELS[lvl];
+  const el=document.getElementById(`c${pr}_${pc}`);
+  if(!el)return;
+  const dot=document.createElement('div');
+  dot.className='pdot';
+  const s=Math.floor(c*.64);
+  dot.style.cssText=`width:${s}px;height:${s}px;background:${l.color};box-shadow:0 0 10px ${l.color},0 0 22px ${l.color}55;`;
+  el.appendChild(dot);
+}
+
+function move(dr,dc){
+  if(blocked)return;
+  const l=LEVELS[lvl],nr=pr+dr,nc=pc+dc;
+  if(nr<0||nr>=l.rows||nc<0||nc>=l.cols||l.grid[nr][nc]===1)return;
+  const old=document.getElementById(`c${pr}_${pc}`);
+  if(old){old.classList.add('visited');old.querySelectorAll('.pdot').forEach(e=>e.remove());}
+  pr=nr;pc=nc;
+  placePlayer();
+  if(pr===l.end.r&&pc===l.end.c) setTimeout(levelDone,300);
+}
+
+function levelDone(){
+  blocked=true;score++;
+  document.getElementById('scN').textContent=score;
+  document.getElementById('dot'+lvl).classList.add('done');
+  showComp();
+}
+
+function showComp(){
+  const l=LEVELS[lvl];
+  const comp=document.getElementById('s-comp');
+  const old=document.getElementById('ccard');
+  const fresh=old.cloneNode(true);
+  old.parentNode.replaceChild(fresh,old);
+  document.getElementById('cIcon').textContent=l.icon;
+  document.getElementById('cBadge').textContent=l.badge;
+  document.getElementById('cBadge').style.color=l.color;
+  document.getElementById('cTitle').textContent=l.title;
+  document.getElementById('cTitle').style.color=l.color;
+  document.getElementById('cText').innerHTML=l.text;
+  const btn=document.getElementById('btnNext');
+  btn.textContent=l.btnTxt;
+  btn.style.border='1px solid '+l.color+'55';
+  btn.style.color=l.color;
+  if(lvl===LEVELS.length-1){
+    btn.onclick=()=>{comp.classList.remove('show');showWin();};
+  } else {
+    btn.onclick=()=>{comp.classList.remove('show');nextLevel();};
+  }
+  comp.classList.add('show');
+}
+
+function nextLevel(){
+  lvl++;
+  document.getElementById('lvlN').textContent=lvl+1;
+  pr=LEVELS[lvl].start.r;pc=LEVELS[lvl].start.c;
+  blocked=false;
+  renderMaze();
+}
+
+function showWin(){
+  document.getElementById('s-game').style.display='none';
+  document.getElementById('s-win').style.display='flex';
+}
+
+function startGame(){
+  lvl=0;score=0;blocked=false;
+  pr=LEVELS[0].start.r;pc=LEVELS[0].start.c;
+  document.getElementById('s-start').style.display='none';
+  document.getElementById('s-win').style.display='none';
+  document.getElementById('s-comp').classList.remove('show');
+  document.getElementById('scN').textContent=0;
+  document.getElementById('lvlN').textContent=1;
+  buildDots();
+  document.getElementById('s-game').style.display='flex';
+  renderMaze();
+  tryMusic();
+}
+
+document.getElementById('btnStart').onclick=startGame;
+document.getElementById('btnRestart').onclick=startGame;
+document.getElementById('aU').onclick=()=>move(-1,0);
+document.getElementById('aD').onclick=()=>move(1,0);
+document.getElementById('aL').onclick=()=>move(0,-1);
+document.getElementById('aR').onclick=()=>move(0,1);
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowUp'||e.key==='w'){e.preventDefault();move(-1,0);}
+  if(e.key==='ArrowDown'||e.key==='s'){e.preventDefault();move(1,0);}
+  if(e.key==='ArrowLeft'||e.key==='a'){e.preventDefault();move(0,-1);}
+  if(e.key==='ArrowRight'||e.key==='d'){e.preventDefault();move(0,1);}
+});
+
+let tx=0,ty=0;
+const mz=document.getElementById('maze');
+mz.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY;},{passive:true});
+mz.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;
+  if(Math.abs(dx)<8&&Math.abs(dy)<8)return;
+  Math.abs(dx)>Math.abs(dy)?move(0,dx>0?1:-1):move(dy>0?1:-1,0);
+});
+
+window.addEventListener('resize',()=>{if(document.getElementById('s-game').style.display!=='none') renderMaze();});
+
+const bc=document.getElementById('bg');
+const bx=bc.getContext('2d');
+function resizeBg(){bc.width=window.innerWidth;bc.height=window.innerHeight;}
+resizeBg();window.addEventListener('resize',resizeBg);
+
+const stars=Array.from({length:100},()=>({x:Math.random()*window.innerWidth,y:Math.random()*window.innerHeight,r:.3+Math.random()*.9,a:Math.random()*Math.PI*2,sp:.006+Math.random()*.014}));
+const petals=Array.from({length:16},()=>({x:Math.random()*window.innerWidth,y:Math.random()*window.innerHeight,vy:.25+Math.random()*.45,vx:(Math.random()-.5)*.35,a:Math.random()*Math.PI*2,sa:.008+Math.random()*.018,r:1.8+Math.random()*2.8,alpha:.08+Math.random()*.22}));
+
+function drawBg(){
+  bx.clearRect(0,0,bc.width,bc.height);
+  stars.forEach(s=>{s.a+=s.sp;bx.globalAlpha=.07+.32*Math.abs(Math.sin(s.a));bx.fillStyle='#fff';bx.beginPath();bx.arc(s.x,s.y,s.r,0,Math.PI*2);bx.fill();});
+  petals.forEach(p=>{p.y+=p.vy;p.x+=p.vx;p.a+=p.sa;if(p.y>bc.height+10){p.y=-10;p.x=Math.random()*bc.width;}bx.globalAlpha=p.alpha;bx.fillStyle='#c084fc';bx.save();bx.translate(p.x,p.y);bx.rotate(p.a);bx.beginPath();bx.ellipse(0,0,p.r,p.r*2.2,0,0,Math.PI*2);bx.fill();bx.restore();});
+  bx.globalAlpha=1;
+  requestAnimationFrame(drawBg);
+}
+drawBg();
+
+let mPlaying=false;
+function tryMusic(){
+  document.getElementById('bgm').play().then(()=>{mPlaying=true;document.getElementById('musicBtn').className='on';document.getElementById('musicBtn').textContent='🎶';}).catch(()=>{});
+}
+function toggleMusic(){
+  const m=document.getElementById('bgm'),b=document.getElementById('musicBtn');
+  if(mPlaying){m.pause();mPlaying=false;b.className='';b.textContent='🎵';}
+  else{m.play().then(()=>{mPlaying=true;b.className='on';b.textContent='🎶';}).catch(()=>{});}
+}
+</script>
+</body>
+</html>
